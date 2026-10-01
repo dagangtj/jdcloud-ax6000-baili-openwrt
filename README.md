@@ -385,7 +385,7 @@ dd if=/tmp/openwrt-…-initramfs-recovery.itb of=$(blkid -t PARTLABEL=recovery -
 - 官方固件目录：https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/
 - 设备资料：https://openwrt.org/toh/hwdata/jdcloud/jdcloud_re-cp-03
 - 25.12.5 设备 U-Boot 补丁（TFTP 参数来源）：https://github.com/openwrt/openwrt/blob/v25.12.5/package/boot/uboot-mediatek/patches/441-add-jdcloud_re-cp-03.patch
-- 恩山论坛讨论帖：见 `docs/恩山论坛发布版-BBCode.txt`（与教程同源的论坛排版版）
+- 恩山论坛讨论帖（2026-10-01 发布）：https://www.right.com.cn/forum/thread-8491622-1-1.html （论坛排版版存档见 `docs/恩山论坛发布版-BBCode.txt`）
 
 > 两台真机的完整刷机档案（逐条命令日志、分区备份、哈希记录）未随仓库公开：
 > 分区备份含本机无线校准与 MAC，属一机一份的敏感数据。教程中所有关键数字

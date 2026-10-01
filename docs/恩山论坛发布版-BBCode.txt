@@ -1,0 +1,360 @@
+[size=5][b]京东云 AX6000 百里刷官方 OpenWrt 通用教程[/b][/size]
+
+[quote]版本：2026-10-01 整合版。本教程由两台真机的完整刷机档案整合而成：[/quote]
+[quote]128G（RE-CP-03，JDCOS 4.2.0.r4080）与 64G（RE-CS-05 尊享版，JDCOS 4.3.0.r4204），[/quote]
+[quote]每一步都在真机上验证过，所有哈希、命令、时间点均可追溯。[/quote]
+
+[hr]
+
+[size=4][b]一、适用范围[/b][/size]
+
+[table]
+[tr][td]项目[/td][td]说明[/td][/tr]
+[tr][td]适用型号[/td][td]京东云无线宝 AX6000 百里：[b]RE-CP-03[/b]、[b]RE-CS-05[/b]（同一硬件，固件通用；RE-CS-05 后台自报型号也是 RE-CP-03）[/td][/tr]
+[tr][td]存储版本[/td][td][b]64GB / 128GB eMMC 均可[/b]（官方同一套镜像，流程仅两处数字不同，见文中标注）[/td][/tr]
+[tr][td]目标系统[/td][td]OpenWrt 官方稳定版 25.12.5（mediatek/filogic）[/td][/tr]
+[tr][td]原厂版本[/td][td]实测 JDCOS 4.2.0.r4080 与 4.3.0.r4204 均可[/td][/tr]
+[tr][td]不适用[/td][td]京东云鲁班 RE-CP-02、雅典娜、哪吒等其他型号；小米/红米 AX6000[/td][/tr]
+[/table]
+
+[b]硬件规格[/b]：MT7986A 四核 A53、1GB DDR4、64/128GB eMMC、4×千兆 + 1×2.5G（WAN）、MT7976C 双频 Wi-Fi 6。
+
+[b]原理[/b]：原厂 JDCOS 不允许直接刷第三方固件。先用官方放出的迁移包刷入过渡版 OpenWrt（4.1.0.r4005）获得 root，再替换引导（GPT/BL2/FIP）为官方版本；断电后新 U-Boot 自动经 TFTP 拉取恢复系统，最后在恢复系统中 sysupgrade 安装正式版。
+
+[b]总流程[/b]（全程约 1 小时，不含排查时间）：
+
+[code]
+原厂后台刷迁移包 → 过渡系统 → 备份全部分区 → 写官方 GPT/BL2/FIP
+→ 断电上电 → U-Boot 经 TFTP 启动恢复系统 → sysupgrade 装正式版 → 验收配置
+[/code]
+
+[b]核心纪律：每一步都有「验证点」，验证不过就停，不要进入下一步。[/b]
+
+[hr]
+
+[size=4][b]二、准备[/b][/size]
+
+[size=3][b]硬件[/b][/size]
+[list]
+[*]电脑一台（本教程命令以 Mac 为例；Windows 差异处在 TFTP 一节说明）
+[*]网线两根：电脑 → 百里千兆 LAN；收尾时 上级路由 → 百里 2.5G WAN
+[*]供电稳定，刷写期间绝不断电
+[/list]
+
+[size=3][b]固件文件（6 个）与哈希[/b][/size]
+
+迁移包（过渡用；官方提交给出的链接，公开教程均使用同一文件）：
+
+[table]
+[tr][td]文件[/td][td]SHA-256[/td][/tr]
+[tr][td]openwrt-mediatek-mt7986-jdcloud_re-cp-03-vendor-migration.bin[/td][td][font=Courier New]c371601461c491489d2f28391ee3373e4605f95ff5d16cf7d142b9b2031a444c[/font][/td][/tr]
+[/table]
+
+官方 25.12.5（下载自 [url]https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/[/url] ，文件名前缀均为 [font=Courier New]openwrt-25.12.5-mediatek-filogic-jdcloud_re-cp-03-[/font]）：
+
+[table]
+[tr][td]文件后缀[/td][td]SHA-256[/td][/tr]
+[tr][td]gpt.bin[/td][td][font=Courier New]6decc5e0ac9ef38bc78f4de8d4df825473a248898c24add4252cd74006f2fd20[/font][/td][/tr]
+[tr][td]preloader.bin（BL2）[/td][td][font=Courier New]d1f272a3a5d474bafdc40bf4a99749304185f12dd799f87c414964b88dd3e72e[/font][/td][/tr]
+[tr][td]bl31-uboot.fip（U-Boot）[/td][td][font=Courier New]52a5e4904488a35d680fbe379b8d90935c683628c3d082ae4823e44cd09c1724[/font][/td][/tr]
+[tr][td]initramfs-recovery.itb（恢复镜像）[/td][td][font=Courier New]ecd5b00a505ec57550bf1a4b92d7fda5a7b4944693768963c0c27ec8a054ba59[/font][/td][/tr]
+[tr][td]squashfs-sysupgrade.itb（正式系统）[/td][td][font=Courier New]cfbe6baca9d2cede824632b9faca00a361871c480f23143a20e386e0cf535c7f[/font][/td][/tr]
+[/table]
+
+刷前逐个核对哈希（Mac/Linux：[font=Courier New]shasum -a 256 文件[/font]；Windows：[font=Courier New]Get-FileHash 文件[/font]）。对不上就重新下载，不要硬刷。
+
+[size=3][b]网络环境检查（两台机器都在这一步翻过车，务必读）[/b][/size]
+
+[b]电脑上同一时间只能有一个接口处于 192.168.1.0/24 网段。[/b]
+
+[list]
+[*]家里主路由如果就是 192.168.1.1（很多 OpenWrt 默认如此）：先把主路由 LAN 改成别的网段（如 192.168.66.1），或刷 TFTP 恢复期间断开电脑与主路由的连接。
+[*]关闭 VPN、ZeroTier、虚拟网卡等。
+[*]macOS「系统设置 → 网络 → 服务顺序」[b]不影响[/b]直连路由的选择，不能靠它解决冲突。
+[*]原理：TFTP 回包按路由表选择出口，同网段有两张网卡时回包会走错接口，U-Boot 永远收不到数据。
+[/list]
+
+[hr]
+
+[size=4][b]三、第一步：确认设备（只读，5 分钟）[/b][/size]
+
+1. 网线连接电脑与百里任意千兆 LAN 口。
+2. 浏览器打开 [font=Courier New][url]http://192.168.68.1[/url][/font]（或 jdcloudwifi.com），用管理密码登录。
+3. 状态页记录原厂版本号（JDCOS-x.x.x.rxxxx）。
+4. 进阶确认（免登录）：访问 [font=Courier New][url]http://192.168.68.1/conf/product_platform.json[/url][/font]，应返回 [font=Courier New]"model": "RE-CP-03"[/font]（RE-CS-05 同样显示 RE-CP-03，这是两者通用的设备侧铁证）。
+
+[b]验证点[/b]：能进后台；型号为 RE-CP-03。不符即停，不要刷相近型号的固件。
+
+[hr]
+
+[size=4][b]四、第二步：刷入迁移包（约 10 分钟）[/b][/size]
+
+1. 完整后台进入：[b]路由设置 → 系统 → 手动升级[/b]。
+[list]
+[*]⚠️ 顶部「在线升级」是厂商在线更新通道，不能刷迁移包。
+[/list]
+2. 「点击上传固件」选择迁移包 → 点页面下方「升级」。
+[list]
+[*]这一步仅上传到 /tmp（前端限制 60MB，迁移包约 26MB）。
+[*]显示「文件上传到服务器成功」。
+[/list]
+3. 点「立即升级」→ 弹出[b]非官方固件提示[/b] → 确认继续。
+[list]
+[*]⚠️「立即升级」不是验证按钮，点了就进入刷写流程（前端逻辑：[font=Courier New]firmware_check[/font] 返回 100 → 提示 → 确认后 [font=Courier New]local_upgrade_action[/font]）。想好再点。
+[/list]
+4. 页面提示「固件升级需要 3-5 分钟，请勿切断电源」。[b]保持供电，不刷新、不拔电。[/b]
+5. 等待重启（ping 中断约 30 秒～1 分钟）。
+
+[b]验证点[/b]（约 5 分钟后）：
+[list]
+[*][font=Courier New][url]http://192.168.68.1[/url][/font] 出现 OpenWrt LuCI 登录页。
+[*]SSH [font=Courier New]root@192.168.68.1[/font]（无密码）执行：
+[/list]
+[code]
+  cat /etc/openwrt_release | head -3   # 4.1.0.r4005，mediatek/mt7986
+  cat /tmp/sysinfo/board_name          # mediatek,mt7986a-emmc-re-cp-03
+[/code]
+[list]
+[*]过渡系统时钟可能停在 2022 年（未对时），正常，时间以电脑为准。
+[/list]
+
+[hr]
+
+[size=4][b]五、第三步：备份（约 15 分钟，最重要）[/b][/size]
+
+[b]进过渡系统后第一件事就是备份。[/b] 它是防砖保险，也保住每台机器独一无二的无线校准数据。
+
+1. 现场读取存储参数（[b]必须实测，两种容量数字不同[/b]）：
+[code]
+   cat /sys/class/block/mmcblk0/size       # 64G=119783424；128G=241664000
+   cat /sys/class/block/mmcblk0boot0/size  # 8192
+   cat /sys/block/mmcblk0/mmcblk0p3/start  # factory 起始，9216
+   cat /sys/block/mmcblk0/mmcblk0p3/size   # factory 长度，4096
+[/code]
+2. 电脑上执行备份（Mac/Linux；过渡系统无 sftp-server，scp 不可用，一律用 SSH 管道）：
+[code]
+   mkdir -p 备份 && cd 备份
+   for dev in mmcblk0boot0 mmcblk0boot1 mmcblk0p2 mmcblk0p3 mmcblk0p4 \
+              mmcblk0p5 mmcblk0p6 mmcblk0p7 mmcblk0p8; do
+     ssh root@192.168.68.1 "sha256sum /dev/$dev" | tee -a 设备端-sha256.txt
+     ssh root@192.168.68.1 "dd if=/dev/$dev bs=1048576 2>/dev/null" > "$dev.bin"
+   done
+   ssh root@192.168.68.1 'dd if=/dev/mmcblk0 bs=512 count=34 2>/dev/null' > gpt-primary.bin
+   # 末尾 33 扇区：64G 用 skip=119783391；128G 用 skip=241663967
+   ssh root@192.168.68.1 'dd if=/dev/mmcblk0 bs=512 skip=119783391 count=33 2>/dev/null' > gpt-backup.bin
+   shasum -a 256 *.bin > 电脑端-sha256.txt
+[/code]
+3. [b]逐项比对[/b]两侧哈希，全部一致才算完成。
+
+[b]验证点[/b]：
+[list]
+[*]9 份分区镜像 + 2 份 GPT 双侧一致。
+[*][b]单独记录 factory（mmcblk0p3）的哈希[/b]：它是本机无线校准与 MAC 地址，一机一份。[b]绝不跨机使用[/b]——实测两台机器的 factory 哈希不同，而 boot0/boot1/fip 两台完全相同（原厂引导是同型号通用镜像）。
+[*]可选：打包 /overlay、/log、/opt、storage 文件（运行中归档，非整盘快照）。
+[/list]
+
+[hr]
+
+[size=4][b]六、第四步：写入官方 GPT / BL2 / FIP（约 5 分钟）[/b][/size]
+
+[quote]百里 BL2 开启 Secure Boot 校验，[b]BL2 与 FIP 必须成对替换[/b]，只换 FIP(U-Boot) 会无法启动。[/quote]
+
+1. 三个官方文件上传路由器 /tmp（SSH 管道），设备端 [font=Courier New]sha256sum[/font] 与官方清单逐项核对。
+2. 在路由器 /tmp 执行写入脚本（[b]64G/128G 仅第一行扇区数不同[/b]；FACTORY 换成本机第五步记录的哈希）：
+
+[code]
+#!/bin/sh
+set -eu
+cd /tmp
+P=openwrt-25.12.5-mediatek-filogic-jdcloud_re-cp-03
+[ "$(cat /sys/class/block/mmcblk0/size)" = 119783424 ]   # 64G；128G 改为 241664000
+[ "$(cat /sys/class/block/mmcblk0boot0/size)" = 8192 ]
+grep -q 're-cp-03' /tmp/sysinfo/board_name
+printf '%s\n' \
+"6decc5e0ac9ef38bc78f4de8d4df825473a248898c24add4252cd74006f2fd20  $P-gpt.bin" \
+"d1f272a3a5d474bafdc40bf4a99749304185f12dd799f87c414964b88dd3e72e  $P-preloader.bin" \
+"52a5e4904488a35d680fbe379b8d90935c683628c3d082ae4823e44cd09c1724  $P-bl31-uboot.fip" | sha256sum -c -
+FACTORY=本机factory哈希
+[ "$(sha256sum /dev/mmcblk0p3 | cut -d' ' -f1)" = "$FACTORY" ]
+
+# 1. GPT（34 扇区）→ 读回比对
+dd if=$P-gpt.bin of=/dev/mmcblk0 bs=512 seek=0 count=34 conv=fsync
+dd if=/dev/mmcblk0 bs=512 count=34 of=/tmp/gpt-readback.bin
+cmp $P-gpt.bin /tmp/gpt-readback.bin && echo 'GPT READBACK VERIFIED'
+
+# 2. BL2 → boot0（解锁只读 → 清零 → 写入 → 读回 → 重新锁）
+echo 0 > /sys/block/mmcblk0boot0/force_ro
+dd if=/dev/zero of=/dev/mmcblk0boot0 bs=512 count=8192 conv=fsync
+dd if=$P-preloader.bin of=/dev/mmcblk0boot0 bs=512 conv=fsync
+head -c 205204 /dev/mmcblk0boot0 > /tmp/bl2-readback.bin
+cmp $P-preloader.bin /tmp/bl2-readback.bin && echo 'BL2 READBACK VERIFIED'
+echo 1 > /sys/block/mmcblk0boot0/force_ro
+
+# 3. FIP（扇区偏移 13312，64G/128G 相同）→ 读回比对
+dd if=/dev/zero of=/dev/mmcblk0 bs=512 seek=13312 count=8192 conv=fsync
+dd if=$P-bl31-uboot.fip of=/dev/mmcblk0 bs=512 seek=13312 conv=fsync
+dd if=/dev/mmcblk0 bs=512 skip=13312 count=1557 of=/tmp/fip-rb.bin
+head -c 797148 /tmp/fip-rb.bin > /tmp/fip-readback.bin
+cmp $P-bl31-uboot.fip /tmp/fip-readback.bin && echo 'FIP READBACK VERIFIED'
+
+# 4. factory 必须原样
+[ "$(sha256sum /dev/mmcblk0p3 | cut -d' ' -f1)" = "$FACTORY" ] && echo 'FACTORY UNCHANGED VERIFIED'
+sync
+echo 'ALL WRITES VERIFIED; READY FOR POWER CYCLE'
+[/code]
+
+[b]验证点[/b]：四行 VERIFIED 全部出现。[b]任何一项不一致，禁止断电重启[/b]，重写直到一致。
+
+[hr]
+
+[size=4][b]七、第五步：TFTP 恢复启动（约 10 分钟）[/b][/size]
+
+新 U-Boot 上电后以 192.168.1.1 身份，从 TFTP 服务器 [b]192.168.1.254[/b] 拉取恢复镜像。电脑充当 TFTP 服务器。
+
+[size=3][b]Mac 搭建临时 TFTP（需 sudo）[/b][/size]
+
+[code]
+# 1. 准备服务目录，放入恢复镜像（文件名必须完全如下，先核对哈希 ecd5b00a…）
+mkdir -p /private/tmp/ax6000-recovery-tftp
+cp openwrt-25.12.5-mediatek-filogic-jdcloud_re-cp-03-initramfs-recovery.itb \
+   /private/tmp/ax6000-recovery-tftp/openwrt-mediatek-filogic-jdcloud_re-cp-03-initramfs-recovery.itb
+# 2. 有线网卡加恢复网段地址
+sudo ifconfig en0 alias 192.168.1.254 netmask 255.255.255.0
+# 3. 用 launchd 起 tftpd（inetd 模式，只监听 192.168.1.254:69）
+#    plist 示例与启停脚本见本项目 恢复/启动临时恢复服务.sh、停止临时恢复服务.sh
+[/code]
+
+Windows：Tftpd64，网卡设静态 IP 192.168.1.254/24，根目录放同名恢复镜像（部分教程建议临时关防火墙）。
+
+[size=3][b]断电前的最后检查（两台机器实测教训）[/b][/size]
+
+1. [b]只有这一张有线网卡[/b]处于 192.168.1.0/24（断开家里同网段 Wi-Fi；主路由是同网段的先改网段）。
+2. 确认直连路由存在且走向正确：
+[code]
+   route -n get 192.168.1.1   # 必须显示 interface: en0（有线）
+[/code]
+   如果走向 Wi-Fi 或默认网关，或有线网卡缺直连路由（链路抖动后可能丢），手动补：
+[code]
+   sudo /sbin/route -n add -net 192.168.1.0/24 -interface 192.168.1.254
+[/code]
+   注意：[font=Courier New]-interface[/font] 后面要填[b]本机在该网段的地址[/b]（192.168.1.254），不是接口名——填接口名会生成指向本机 MAC 的无效路由（实测踩过）。
+3. 强烈建议预检（在过渡系统里实测下载一次）：
+[code]
+   ssh root@192.168.68.1 'ip addr add 192.168.1.1/24 dev br-lan; \
+     tftp -g -r openwrt-mediatek-filogic-jdcloud_re-cp-03-initramfs-recovery.itb -l /tmp/t.itb 192.168.1.254; \
+     sha256sum /tmp/t.itb; ip addr del 192.168.1.1/24 dev br-lan'
+   # 哈希应为 ecd5b00a…，测完临时地址已撤
+[/code]
+
+[size=3][b]断电上电[/b][/size]
+
+[b]拔电源，等约 5 秒，重新插上。不按任何按键。[/b]
+
+U-Boot 每约 5 秒重试一次 TFTP；9.6MB 镜像几秒内传完，随后自动启动恢复系统（约 1 分钟）。
+
+[b]验证点[/b]：[font=Courier New]ping 192.168.1.1[/font] 通；SSH 上 [font=Courier New]ubus call system board[/font] 显示 OpenWrt [b]25.12.5[/b]、内核 6.12.x、[font=Courier New]rootfs_type: initramfs[/font]、board_name [font=Courier New]jdcloud,re-cp-03[/font]。
+
+[b]连不上时按序排查[/b]：
+1. [font=Courier New]route -n get 192.168.1.1[/font] 走哪张网卡？
+2. TFTP 日志是否反复 [font=Courier New]receive_packet: timeout[/font]（Mac：[font=Courier New]log show --last 5m --predicate 'process == "tftpd"'[/font]）——timeout 说明回包没送到 U-Boot，99% 是路由问题。
+3. ping 通但身份不对？——应答的可能是你家主路由，用 [font=Courier New]ubus call system board[/font] 验明正身。
+4. U-Boot 会重试很久才放弃。修好电脑侧后一般下一轮就成功；确实没反应再断电重来。
+
+[hr]
+
+[size=4][b]八、第六步：安装正式系统（约 10 分钟）[/b][/size]
+
+1. 上传 sysupgrade 镜像并核对：
+[code]
+   ssh root@192.168.1.1 'cat > /tmp/sysupgrade.itb' < openwrt-25.12.5-…-squashfs-sysupgrade.itb
+   ssh root@192.168.1.1 'sha256sum /tmp/sysupgrade.itb'   # 应为 cfbe6bac…535c7f
+[/code]
+2. 刷写：
+[code]
+   ssh root@192.168.1.1 'sysupgrade /tmp/sysupgrade.itb'
+[/code]
+   看到 [font=Courier New]Signature check OK[/font] → [font=Courier New]Commencing upgrade. Closing all shell sessions.[/font] 后 SSH 断开是[b]正常现象[/b]；末尾的 [font=Courier New]ubus call system sysupgrade … (Connection failed)[/font] 是 stage2 断开会道的正常表现，[b]不是失败[/b]。
+3. [b]等 5 分钟以上[/b]，不刷新、不拔电。
+
+[b]验证点[/b]：重新访问 192.168.1.1，[font=Courier New]ubus call system board[/font] 显示 [font=Courier New]rootfs_type: squashfs[/font]——系统已写入 eMMC 并从中启动，刷机完成。
+
+[hr]
+
+[size=4][b]九、第七步：初始配置与验收[/b][/size]
+
+1. [b]联网[/b]：上级路由 LAN → 百里 [b]2.5G 口[/b]（WAN=eth1，默认 DHCP）。LAN 为 4 个千兆口（br-lan）。
+2. [b]简体中文[/b]（25.12 起包管理器为 apk，不再是 opkg）：
+[code]
+   apk update && apk add luci-i18n-base-zh-cn
+[/code]
+   LuCI → System → System → Language → 简体中文。
+3. [b]设置 root 密码[/b]（默认无密码，必须设）。
+4. 无线建议：国家码 CN；2.4G 20MHz、5G 80MHz 起步；WPA2-AES 或 WPA2/WPA3 混合；单 AP 不默认开 802.11r。
+5. 验收清单：
+[list]
+[*][ ] 双频无线可搜到并连接
+[*][ ] 4×千兆 + 2.5G 协商速率正确，WAN 拿到上级 IP 能上网
+[*][ ] [font=Courier New]df -h /[/font]：overlay 可用约 400MB+
+[*][ ] 软件重启 3 次 + 断电冷启 2 次均正常
+[/list]
+6. LuCI → 系统 → 备份/升级 → 生成备份，下载保存配置归档。
+
+[size=3][b]可选：eMMC 恢复双保险[/b][/size]
+
+把恢复镜像写入 recovery 分区，以后启动失败可脱离 TFTP 从 eMMC 恢复（TFTP 恢复依然保留）：
+
+[code]
+dd if=/tmp/openwrt-…-initramfs-recovery.itb of=$(blkid -t PARTLABEL=recovery -o device) bs=512 conv=fsync
+[/code]
+
+[hr]
+
+[size=4][b]十、64G 与 128G 差异对照（两台实测）[/b][/size]
+
+[table]
+[tr][td]项目[/td][td]64G[/td][td]128G[/td][/tr]
+[tr][td]实测型号[/td][td]RE-CS-05 尊享版[/td][td]RE-CP-03[/td][/tr]
+[tr][td]eMMC 扇区数[/td][td][b]119,783,424[/b]（57.1 GiB）[/td][td][b]241,664,000[/b]（115.2 GiB）[/td][/tr]
+[tr][td]GPT 末尾备份 skip[/td][td]119783391[/td][td]241663967[/td][/tr]
+[tr][td]写入脚本扇区校验值[/td][td]119783424[/td][td]241664000[/td][/tr]
+[tr][td]官方 gpt.bin / preloader / fip[/td][td]通用（固定布局，与容量无关）[/td][td]通用[/td][/tr]
+[tr][td]boot0/boot1 大小[/td][td]8192 扇区（相同）[/td][td]8192 扇区[/td][/tr]
+[tr][td]factory 位置[/td][td]9216 起 / 4096 长（相同）[/td][td]9216 起 / 4096 长[/td][/tr]
+[tr][td]FIP 写入偏移[/td][td]seek=13312（相同）[/td][td]seek=13312[/td][/tr]
+[tr][td]刷完后分区[/td][td]p1–p5 + p128（官方布局，相同）[/td][td]相同[/td][/tr]
+[tr][td]原厂后台/迁移包入口[/td][td]相同（手动升级页，前端限 60MB）[/td][td]相同[/td][/tr]
+[/table]
+
+[b]结论：两种容量流程完全一致，只有「扇区总数」和「GPT 末尾备份 skip」两处数字不同。[/b]
+
+[hr]
+
+[size=4][b]十一、坑与排查速查（全部来自两台真机的实际翻车）[/b][/size]
+
+[table]
+[tr][td]#[/td][td]现象[/td][td]原因[/td][td]对策[/td][/tr]
+[tr][td]1[/td][td]TFTP 反复 [font=Courier New]receive_packet: timeout[/font][/td][td]电脑另一接口也在 192.168.1.0/24，回包走错接口[/td][td]主路由改网段或断开；确保只有一张网卡在该网段[/td][/tr]
+[tr][td]2[/td][td]只有一张网卡了 TFTP 还是不通[/td][td]有线网卡丢了 192.168.1.0/24 直连路由（链路抖动后 macOS 会丢）[/td][td][font=Courier New]sudo route -n add -net 192.168.1.0/24 -interface 192.168.1.254[/font][/td][/tr]
+[tr][td]3[/td][td]加路由填 [font=Courier New]-interface en0[/font] 后仍不通[/td][td]生成了指向本机 MAC 的无效主机路由[/td][td]删了重加，[font=Courier New]-interface[/font] 后填本机 IP 而非接口名[/td][/tr]
+[tr][td]4[/td][td]ping 192.168.1.1 通但刷机没进展[/td][td]应答的是家里主路由（恰好也是 OpenWrt）[/td][td][font=Courier New]ubus call system board[/font] 验明正身[/td][/tr]
+[tr][td]5[/td][td]scp 传文件报 sftp-server not found[/td][td]过渡/恢复系统无 sftp-server[/td][td]用 [font=Courier New]ssh … 'cat > /tmp/f' < 本地文件[/font] 管道[/td][/tr]
+[tr][td]6[/td][td]sysupgrade 末尾 Connection failed[/td][td]stage2 正常断开会话[/td][td]不是失败，等 5 分钟[/td][/tr]
+[tr][td]7[/td][td]「立即升级」以为只是校验[/td][td]它直接触发刷写[/td][td]想好再点[/td][/tr]
+[tr][td]8[/td][td]迁移系统时间显示 2022 年[/td][td]未对时[/td][td]正常，以电脑时间为准[/td][/tr]
+[tr][td]9[/td][td]写入后读回校验不一致[/td][td]传输/写入错误[/td][td][b]禁止重启[/b]，重写直到一致[/td][/tr]
+[tr][td]10[/td][td]只换了 U-Boot(FIP) 没换 BL2[/td][td]Secure Boot 校验失败[/td][td]BL2 与 FIP 必须成对替换[/td][/tr]
+[tr][td]11[/td][td]factory 用了别的机器的备份[/td][td]校准与 MAC 是一机一份[/td][td]只回灌本机 factory，写入前后核对哈希[/td][/tr]
+[tr][td]12[/td][td]脚本写死 128G 扇区数拿到 64G 用[/td][td]容量不同校验失败[/td][td]现场读 [font=Courier New]mmcblk0/size[/font]，按上表填[/td][/tr]
+[tr][td]13[/td][td]调 macOS 网络服务顺序没解决冲突[/td][td]服务顺序不影响直连路由[/td][td]见 #1 #2，从路由表下手[/td][/tr]
+[/table]
+
+[hr]
+
+[size=4][b]十二、资料来源与档案[/b][/size]
+
+[list]
+[*]官方设备支持提交（刷写流程原始出处）：[url]https://lists.infradead.org/pipermail/lede-commits/2024-July/021801.html[/url]
+[*]官方固件目录：[url]https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/[/url]
+[*]设备资料：[url]https://openwrt.org/toh/hwdata/jdcloud/jdcloud_re-cp-03[/url]
+[*]25.12.5 设备 U-Boot 补丁（TFTP 参数来源）：[url]https://github.com/openwrt/openwrt/blob/v25.12.5/package/boot/uboot-mediatek/patches/441-add-jdcloud_re-cp-03.patch[/url]
+[/list]

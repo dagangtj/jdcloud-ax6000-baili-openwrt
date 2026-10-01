@@ -1,0 +1,8 @@
+d79d1c4b3a18dac919371f8d9f1a9350363d9b94261744bd2cc2f5c3e4c17115 *config.buildinfo
+e11279b01e7fea7f7d399e25e969d9382be6891071cbc1225804195224b27b52 *feeds.buildinfo
+14c30dc7447079383c91eb4f262bb14ae793c49034e5fbc5634fb4010240d1da *kernel-debug.tar.zst
+52a5e4904488a35d680fbe379b8d90935c683628c3d082ae4823e44cd09c1724 *openwrt-25.12.5-mediatek-filogic-jdcloud_re-cp-03-bl31-uboot.fip
+6decc5e0ac9ef38bc78f4de8d4df825473a248898c24add4252cd74006f2fd20 *openwrt-25.12.5-mediatek-filogic-jdcloud_re-cp-03-gpt.bin
+ecd5b00a505ec57550bf1a4b92d7fda5a7b4944693768963c0c27ec8a054ba59 *openwrt-25.12.5-mediatek-filogic-jdcloud_re-cp-03-initramfs-recovery.itb
+d1f272a3a5d474bafdc40bf4a99749304185f12dd799f87c414964b88dd3e72e *openwrt-25.12.5-mediatek-filogic-jdcloud_re-cp-03-preloader.bin
+cfbe6baca9d2cede824632b9faca00a361871c480f23143a20e386e0cf535c7f *openwrt-25.12.5-mediatek-filogic-jdcloud_re-cp-03-squashfs-sysupgrade.itb

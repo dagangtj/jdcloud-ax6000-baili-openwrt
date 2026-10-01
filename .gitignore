@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# 固件与分区备份一律不入库（含敏感校准数据，见 README 脱敏说明）
+*.bin
+*.itb
+*.fip
+backup*/
+备份/

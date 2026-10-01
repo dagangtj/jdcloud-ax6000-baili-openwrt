@@ -21,6 +21,14 @@ macOS 临时 TFTP 服务搭建、恢复网段路由排障，直到 sysupgrade �
 例如 TFTP 反复 `receive_packet: timeout`，是 AI 从 tftpd 日志反推路由表、
 定位到「同网段双网卡回包走错接口」这一根因的。教程里的每条命令、每个哈希、每个时间点，都有当次会话的操作记录可查。
 
+## 优化配置篇（续篇）
+
+刷完之后的全部优化配置——LuCI 中文、eMMC 扩容出 114GB 数据盘、SMB 网络共享、PPPoE 拨号、
+SQM/CAKE 调优、Argon 美化、双路由灌盘压测、改网段与 Tailscale 远程访问——同样由 AI 代理全程实操完成，
+文档、监控脚本与实操截图见 [`optimization/`](optimization/)。
+
+- 恩山论坛第二帖（2026-10-02 发布）：https://www.right.com.cn/forum/thread-8491638-1-1.html
+
 ## 仓库结构
 
 | 路径 | 内容 |
@@ -387,6 +395,7 @@ dd if=/tmp/openwrt-…-initramfs-recovery.itb of=$(blkid -t PARTLABEL=recovery -
 - 设备资料：https://openwrt.org/toh/hwdata/jdcloud/jdcloud_re-cp-03
 - 25.12.5 设备 U-Boot 补丁（TFTP 参数来源）：https://github.com/openwrt/openwrt/blob/v25.12.5/package/boot/uboot-mediatek/patches/441-add-jdcloud_re-cp-03.patch
 - 恩山论坛讨论帖（2026-10-01 发布）：https://www.right.com.cn/forum/thread-8491622-1-1.html （论坛排版版存档见 `docs/恩山论坛发布版-BBCode.txt`）
+- 恩山论坛第二帖·优化配置篇（2026-10-02 发布）：https://www.right.com.cn/forum/thread-8491638-1-1.html （BBCode 存档见 `docs/恩山发布-第二帖-BBCode.txt`）
 
 > 两台真机的完整刷机档案（逐条命令日志、分区备份、哈希记录）未随仓库公开：
 > 分区备份含本机无线校准与 MAC，属一机一份的敏感数据。教程中所有关键数字

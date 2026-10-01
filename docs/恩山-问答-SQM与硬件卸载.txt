@@ -1,0 +1,23 @@
+[quote][b]坛友 iamyangyi 的问题[/b]
+我好奇 都进foe表了 怎么去Sqm流量整形的 还是ai挖的坑？[/quote]
+
+问得好，这正是当时三条路线实测的核心矛盾。答案：[b]最终配置里硬件卸载是关闭的[/b]，流量不进 FoE/PPE 表，全部过 CPU 的 CAKE 队列，所以 SQM 能正常整形。
+
+当时实测（500M 宽带，PPPoE）：
+
+[table]
+[tr][td]路线[/td][td]下行[/td][td]满载延迟（平均/峰值）[/td][td]结论[/td][/tr]
+[tr][td]基准（无卸载无 SQM）[/td][td]470 Mbps[/td][td]24.8 / 74.9 ms[/td][td]—[/td][/tr]
+[tr][td]硬件卸载 + WED[/td][td]497 Mbps[/td][td]35.9 / 144.7 ms[/td][td]快 6%，延迟尖峰严重，弃用[/td][/tr]
+[tr][td]SQM CAKE（采用）[/td][td]378 Mbps[/td][td]21.0 / 34.8 ms[/td][td]✅[/td][/tr]
+[/table]
+
+卸载路线的问题正如您所说：进了 FoE 表的流量不过 qdisc，CAKE 管不着，所以那条路线满载延迟冲到 145ms，当场弃用。启用 SQM 前做了三件事：
+
+[list=1]
+[*]防火墙里关掉硬件流量分流（[font=Courier New]flow_offloading_hw='0'[/font]）
+[*]断电 10 秒再开机，清掉 PPE 硬件表项残留（MTK 平台改卸载/SQM 配置的老坑，不清会部分失效）
+[*]复测验收：有线满载延迟平均 11.5ms、峰值 11.8ms，和空载（12.0ms）几乎一样——流量要是走了 offload，这个数字不可能压得住，算是反向证明 SQM 真的在干活
+[/list]
+
+所以严格说不是 AI 挖的坑，是 AI 先挖出来、实测对比、再自己填上的坑 🙂 代价是约八成的吞吐（378/470），换来下载跑满时游戏、视频通话不卡。两条路线的切换命令和完整数据在 GitHub 仓库 optimization/ 优化方案的附录 K/L，想自己复测的坛友可以照抄。

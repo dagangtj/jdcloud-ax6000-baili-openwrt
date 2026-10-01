@@ -4,6 +4,11 @@
 [quote]128G（RE-CP-03，JDCOS 4.2.0.r4080）与 64G（RE-CS-05 尊享版，JDCOS 4.3.0.r4204），[/quote]
 [quote]每一步都在真机上验证过，所有哈希、命令、时间点均可追溯。[/quote]
 
+[quote][b]特别说明：这是一次「AI 自动刷机」的全程实录。[/b]两台机器从备份、哈希比对、写引导、
+TFTP 排障到装正式系统，全部由 AI 代理在本人授权下通过 SSH 直接实操；
+本人只负责网页点确认、插拔电源和验证点叫停。文末 13 条踩坑全部来自 AI 实操中的真实翻车与现场修复。
+完整教程与脚本已开源（GitHub 仓库链接见文末）。[/quote]
+
 [hr]
 
 [size=4][b]一、适用范围[/b][/size]
@@ -353,6 +358,7 @@ dd if=/tmp/openwrt-…-initramfs-recovery.itb of=$(blkid -t PARTLABEL=recovery -
 [size=4][b]十二、资料来源与档案[/b][/size]
 
 [list]
+[*][b]本教程 GitHub 仓库（教程全文 + 全部脚本 + 固件校验清单）[/b]：[url]https://github.com/dagangtj/jdcloud-ax6000-baili-openwrt[/url]
 [*]官方设备支持提交（刷写流程原始出处）：[url]https://lists.infradead.org/pipermail/lede-commits/2024-July/021801.html[/url]
 [*]官方固件目录：[url]https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/[/url]
 [*]设备资料：[url]https://openwrt.org/toh/hwdata/jdcloud/jdcloud_re-cp-03[/url]

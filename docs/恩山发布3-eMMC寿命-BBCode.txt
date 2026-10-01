@@ -3,6 +3,8 @@
 [quote]系列第 3 帖。第 1 帖刷机实录：https://www.right.com.cn/forum/thread-8491622-1-1.html
 本帖不是教程，是一篇探讨：把「内置硬盘寿命」这件事的原理、经验值、我们自己的两台真机数据和系统的监控方法摆在一起，抛砖引玉，希望和坛友一起交流进步。文中研究由 AI 代理（Kimi）协助完成，所有实测数据真实可查。[/quote]
 
+[b]系列帖子[/b]：实录 1（刷机实操，13 坑全解）https://www.right.com.cn/forum/thread-8491622-1-1.html ｜ 实录 2（优化配置，NAS/拨号/压测）https://www.right.com.cn/forum/thread-8491638-1-1.html ｜ 实录 3（eMMC 寿命探讨，本帖）
+
 [b]一、先交代我们自己的两台机器（诚实披露）[/b]
 
 [table]

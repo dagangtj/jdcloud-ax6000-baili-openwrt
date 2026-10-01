@@ -1,6 +1,8 @@
 [size=5][b]京东云 AX6000 百里刷官方 OpenWrt 通用教程[/b][/size]
 
 [quote]版本：2026-10-01 整合版。本教程由两台真机的完整刷机档案整合而成：[/quote]
+
+[b]系列帖子[/b]：实录 1（刷机实操，13 坑全解，本帖）｜ 实录 2（优化配置，NAS/拨号/压测）https://www.right.com.cn/forum/thread-8491638-1-1.html ｜ 实录 3（eMMC 寿命探讨）https://www.right.com.cn/forum/thread-8491642-1-1.html
 [quote]128G（RE-CP-03，JDCOS 4.2.0.r4080）与 64G（RE-CS-05 尊享版，JDCOS 4.3.0.r4204），[/quote]
 [quote]每一步都在真机上验证过，所有哈希、命令、时间点均可追溯。[/quote]
 

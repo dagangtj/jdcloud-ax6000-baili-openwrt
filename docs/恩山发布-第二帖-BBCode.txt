@@ -9,6 +9,8 @@ https://www.right.com.cn/forum/thread-8491622-1-1.html
 我还是只做三件事：插拔网线电源、提供账号密码、翻车时下令重置。
 所有优化文档、监控脚本、压测报告已开源（GitHub 链接见文末）。[/quote]
 
+[b]系列帖子[/b]：实录 1（刷机实操，13 坑全解）https://www.right.com.cn/forum/thread-8491622-1-1.html ｜ 实录 2（优化配置，NAS/拨号/压测，本帖）｜ 实录 3（eMMC 寿命探讨）https://www.right.com.cn/forum/thread-8491642-1-1.html
+
 [hr]
 
 [size=4][b]一、AI 全程做了哪些优化[/b][/size]

@@ -30,6 +30,7 @@ macOS 临时 TFTP 服务搭建、恢复网段路由排障，直到 sysupgrade �
 | `firmware/` | 固件获取来源与 SHA-256 校验清单（**不分发二进制**） |
 | `images/` | 过程截图（已逐张检查，不含密码/MAC/序列号） |
 | `docs/` | 恩山论坛发布版（Discuz BBCode） |
+| `optimization/` | **优化配置篇**：刷完之后的全部优化配置文档（中文/扩容/NAS/拨号/SQM/美化/压测）、eMMC 监控脚本与实操截图 |
 
 ## 教程正文
 
